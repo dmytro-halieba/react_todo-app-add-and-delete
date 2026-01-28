@@ -24,6 +24,7 @@ export const App: React.FC = () => {
 
   const haveTodos = todos.length > 0;
   const activeTodosCount = todos.filter(t => !t.completed).length;
+  const completedTodosCount = todos.filter(t => t.completed).length;
 
   function handleError(message: string) {
     setError(message);
@@ -55,6 +56,7 @@ export const App: React.FC = () => {
       })
       .finally(() => {
         setDeletingTodoIds(current => current.filter(id => id !== todoId));
+        inputRef.current?.focus();
       });
   }
 
@@ -124,6 +126,14 @@ export const App: React.FC = () => {
 
     return matchesStatus;
   });
+
+  function handleClearCompleted() {
+    const completedTodos = todos.filter(todo => todo.completed);
+
+    completedTodos.forEach(todo => {
+      handleDeleteTodo(todo.id);
+    });
+  }
 
   return (
     <div className="todoapp">
@@ -268,11 +278,12 @@ export const App: React.FC = () => {
               </a>
             </nav>
 
-            {/* this button should be disabled if there are no completed todos */}
             <button
               type="button"
               className="todoapp__clear-completed"
               data-cy="ClearCompletedButton"
+              disabled={completedTodosCount === 0}
+              onClick={handleClearCompleted}
             >
               Clear completed
             </button>
