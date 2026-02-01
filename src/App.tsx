@@ -1,22 +1,25 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import React, { useState, useEffect, useRef } from 'react';
-import { Todo } from './types/Todo';
 import cn from 'classnames';
 
-// import { UserWarning } from './UserWarning';
 import { USER_ID } from './api/todos';
+import {
+  Todo,
+  FilterStatus,
+  ErrorMessage,
+  TODO_FILTER_NAV_CONFIG,
+} from './types';
+import { getVisibleTodos } from './utils/getVisibleTodos';
 
 import * as todoService from './api/todos';
-
-export type FilterStatus = 'All' | 'Active' | 'Completed';
 
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState<FilterStatus>('All');
+  const [filter, setFilter] = useState<FilterStatus>(FilterStatus.All);
   const [query, setQuery] = useState('');
   const [deletingTodoIds, setDeletingTodoIds] = useState<number[]>([]);
 
@@ -52,7 +55,7 @@ export const App: React.FC = () => {
         );
       })
       .catch(() => {
-        handleError('Unable to delete a todo');
+        handleError(ErrorMessage.DeleteTodoFailed);
       })
       .finally(() => {
         setDeletingTodoIds(current => current.filter(id => id !== todoId));
@@ -66,7 +69,7 @@ export const App: React.FC = () => {
     const trimmedTitle = query.trim();
 
     if (trimmedTitle.length === 0) {
-      handleError('Title should not be empty');
+      handleError(ErrorMessage.EmptyTitle);
 
       return;
     }
@@ -89,7 +92,7 @@ export const App: React.FC = () => {
         setQuery('');
       })
       .catch(() => {
-        handleError('Unable to add a todo');
+        handleError(ErrorMessage.AddTodoFailed);
       })
       .finally(() => {
         setLoading(false);
@@ -104,7 +107,7 @@ export const App: React.FC = () => {
       .getTodos()
       .then(setTodos)
       .catch(() => {
-        handleError('Unable to load todos');
+        handleError(ErrorMessage.LoadTodoFailed);
       })
       .finally(() => {
         setLoading(false);
@@ -118,14 +121,7 @@ export const App: React.FC = () => {
     }
   }, [loading, tempTodo]);
 
-  const visibleTodos = todos.filter(todo => {
-    const matchesStatus =
-      filter === 'All' ||
-      (filter === 'Completed' && todo.completed) ||
-      (filter === 'Active' && !todo.completed);
-
-    return matchesStatus;
-  });
+  const visibleTodos = getVisibleTodos(todos, filter);
 
   function handleClearCompleted() {
     const completedTodos = todos.filter(todo => todo.completed);
@@ -157,8 +153,7 @@ export const App: React.FC = () => {
               onChange={e => setQuery(e.target.value)}
               className="todoapp__new-todo"
               placeholder="What needs to be done?"
-              disabled={loading && tempTodo !== null}
-              autoFocus
+              disabled={loading}
             />
           </form>
         </header>
@@ -246,36 +241,19 @@ export const App: React.FC = () => {
             </span>
 
             <nav className="filter" data-cy="Filter">
-              <a
-                href="#/"
-                className={cn('filter__link', { selected: filter === 'All' })}
-                onClick={() => setFilter('All')}
-                data-cy="FilterLinkAll"
-              >
-                All
-              </a>
-
-              <a
-                href="#/active"
-                className={cn('filter__link', {
-                  selected: filter === 'Active',
-                })}
-                onClick={() => setFilter('Active')}
-                data-cy="FilterLinkActive"
-              >
-                Active
-              </a>
-
-              <a
-                href="#/completed"
-                className={cn('filter__link', {
-                  selected: filter === 'Completed',
-                })}
-                onClick={() => setFilter('Completed')}
-                data-cy="FilterLinkCompleted"
-              >
-                Completed
-              </a>
+              {TODO_FILTER_NAV_CONFIG.map(({ label, value, href, dataCy }) => (
+                <a
+                  key={value}
+                  href={href}
+                  className={cn('filter__link', {
+                    selected: filter === value,
+                  })}
+                  onClick={() => setFilter(value)}
+                  data-cy={dataCy}
+                >
+                  {label}
+                </a>
+              ))}
             </nav>
 
             <button
